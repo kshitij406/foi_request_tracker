@@ -82,13 +82,15 @@ static/
 data/
   bank-holidays.json   gov.uk bank holiday data
 schema.sql       Database tables and indexes
-tests/           Unit tests for deadlines and workflow
+tests/           Unit and API tests (conftest.py sets up a temp DB per test)
 ```
 
 ## Tests
 
 ```bash
-python -m pytest
+pytest -v
 ```
 
-Use `python -m pytest` rather than plain `pytest`, so that the project root is on the import path.
+- `test_deadlines.py`: due-date rules (weekends, bank holidays, Christmas, Easter, received on a weekend)
+- `test_workflow.py`: allowed and forbidden status moves
+- `test_api.py`: endpoints end to end. Each test gets its own temporary database (see `tests/conftest.py`), so `foi.db` is never touched.
