@@ -6,106 +6,102 @@
 <title>{% block title %}FOI Request Tracker{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Unbounded:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* Black, with white used as light. Hierarchy is opacity. Red means one thing: overdue. */
-    --bg: #000;
-    --fg: #fff;
-    --fg-muted: rgba(255, 255, 255, 0.74);
-    --fg-faint: rgba(255, 255, 255, 0.6);
-    --line: rgba(255, 255, 255, 0.16);
-    --surface: rgba(255, 255, 255, 0.04);
-    --late: #ff5a4f;                       /* 6.4:1 on black */
-    --late-wash: rgba(255, 90, 79, 0.09);
+    /* Each colour has one job. Navy = actions. Red = overdue, nothing else. */
+    --bg: #f6f5f1;
+    --surface: #fff;
+    --ink: #1c2430;
+    --muted: #586170;        /* 6.1:1 on white */
+    --line: #e2dfd7;
+    --line-strong: #cbc6ba;
+    --head: #f1efe9;
+    --accent: #1f3d6b;
+    --accent-hover: #142a4d;
+    --late: #b3261e;         /* 6.5:1 on white */
+    --late-soft: #fbedeb;
+    --radius: 4px;
 
-    --gutter: clamp(16px, 4vw, 40px);
-    --measure: 1180px;
-
-    --font: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --font-display: "Unbounded", "Archivo", "Helvetica Neue", Arial, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   }
 
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font: 16px/1.5 var(--font);
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: inherit; text-decoration: none; }
-  ::selection { background: var(--fg); color: var(--bg); }
-  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font); }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h1, h2 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
-  .container { max-width: calc(var(--measure) + var(--gutter) * 2); margin: 0 auto; padding: 0 var(--gutter); }
-  .label {
-    font: 500 11px/1.4 var(--font-mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--fg-faint);
-  }
-  .mono { font: 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; }
-  .muted { color: var(--fg-muted); }
-  .faint { color: var(--fg-faint); }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  .muted { color: var(--muted); }
+  .mono { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
   .small { font-size: 13px; }
   .late-text { color: var(--late); }
 
-  /* Top bar */
-  .top {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 18px 0; border-bottom: 1px solid var(--line);
-  }
-  .top .name { font: 800 14px/1 var(--font-display); letter-spacing: 0.02em; text-transform: uppercase; }
-  .top a.label:hover { color: var(--fg); }
+  /* Header */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; justify-content: space-between; align-items: center; height: 56px; }
+  .brand { font-weight: 600; color: var(--ink); text-decoration: none; }
+  .brand span { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .top nav a { font-size: 14px; text-decoration: none; }
+  .top nav a:hover { text-decoration: underline; }
 
-  /* Status: marker + text. Filled = open, outlined = finished. */
-  .status { white-space: nowrap; }
-  .status::before {
-    content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px;
-    vertical-align: 1px; background: currentColor;
-  }
-  .status.open { color: var(--fg); }
-  .status.done { color: var(--fg-faint); }
-  .status.done::before { background: none; border: 1px solid currentColor; }
-  .flag { display: inline-block; color: var(--late); }
+  main.wrap { padding-top: 32px; padding-bottom: 56px; }
 
-  /* Forms: hairline fields, sharp buttons. Primary is solid white, secondary is outlined. */
-  .field { display: flex; flex-direction: column; gap: 6px; }
+  /* Panels: white, hairline border, no shadow */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 14px 20px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+  .panel-body { padding: 20px; }
+
+  /* Status tag: neutral, with a marker. Filled = open, outlined = finished. Text always says the status. */
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-size: 13px; font-weight: 500; padding: 2px 8px; border-radius: var(--radius);
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  }
+  .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .tag.done { color: var(--muted); }
+  .tag.done::before { background: none; border: 1.5px solid currentColor; }
+  .tag.late { color: var(--late); border-color: var(--late); background: var(--late-soft); }
+  .tag.late::before { border-radius: 1px; }
+
+  /* Forms */
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 500; }
   input[type=text], input[type=email], input[type=date] {
-    font: 15px/1.4 var(--font); color: var(--fg); background: transparent;
-    border: 0; border-bottom: 1px solid var(--line); padding: 8px 0; border-radius: 0;
-    color-scheme: dark;
+    font: 15px/1.4 var(--font); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 8px 10px;
   }
-  input:focus { outline: none; border-bottom-color: var(--fg); }
+  input:focus { outline: 3px solid rgba(31, 61, 107, 0.25); border-color: var(--accent); }
   .btn {
-    font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 14px 20px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg);
-    cursor: pointer; transition: background .15s, color .15s;
+    font: 500 14px/1 var(--font); padding: 10px 16px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff; text-decoration: none;
+    display: inline-block;
   }
-  .btn:hover { background: transparent; color: var(--fg); }
-  .btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
-  .btn.ghost:hover { border-color: var(--fg); }
+  .btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.secondary { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+  .btn.secondary:hover { border-color: var(--ink); }
 
-  /* Error banner: marked by text and a rule, not a coloured box */
-  .error { border-left: 3px solid var(--late); padding: 10px 0 10px 14px; margin: 0 0 20px; color: var(--fg); }
-  .error .label { color: var(--late); display: block; margin-bottom: 2px; }
+  /* Messages: a coloured rule plus words, so colour is never the only signal */
+  .notice { border: 1px solid var(--line); border-left: 4px solid var(--late); background: var(--surface);
+            border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; }
+  .notice strong { display: block; color: var(--late); }
 
-  footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: 28px 0 48px; }
+  @media (max-width: 600px) { .brand span { display: none; } }
 
   {% block styles %}{% endblock %}
 </style>
 </head>
 <body>
-<div class="container">
-  <header class="top">
-    <a class="name" href="/">FOI Tracker</a>
-    <a class="label" href="/docs">API docs →</a>
-  </header>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/">FOI Request Tracker<span>Freedom of Information casework</span></a>
+    <nav><a href="/docs">API docs</a></nav>
+  </div>
+</header>
 
+<main class="wrap">
   {% block content %}{% endblock %}
-</div>
+</main>
 </body>
 </html>

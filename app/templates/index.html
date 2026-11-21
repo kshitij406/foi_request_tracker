@@ -1,149 +1,128 @@
 {% extends "base.html" %}
 
 {% block styles %}
-  /* Headline: the one thing to read first */
-  .lede { padding: clamp(48px, 9vw, 112px) 0 clamp(32px, 5vw, 56px); }
-  .lede h1 {
-    margin: 0;
-    font: 800 clamp(2.2rem, 6.4vw, 5.2rem)/0.98 var(--font-display);
-    letter-spacing: -0.03em;
-    max-width: 14ch;
-  }
-  .lede h1 .n { color: var(--late); }
-  .lede p { margin: 20px 0 0; max-width: 56ch; color: var(--fg-muted); font-size: 17px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .page-head h1 { font-size: 28px; }
+  .page-head p { margin: 4px 0 0; }
 
-  /* Counts ledger: one row, hairline dividers */
-  .ledger {
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-  }
-  .ledger div { padding: 18px 20px 16px 0; }
-  .ledger div + div { padding-left: 20px; border-left: 1px solid var(--line); }
-  .ledger .num { display: block; font: 700 32px/1.1 var(--font-display); font-variant-numeric: tabular-nums; margin-top: 6px; }
-  .ledger .late .num { color: var(--late); }
-
-  /* New request: native <details>, so it opens and closes without JavaScript */
-  .new { border-bottom: 1px solid var(--line); }
-  .new summary { list-style: none; cursor: pointer; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
+  /* New request: native <details>, so it opens without JavaScript */
+  .new { margin-bottom: 24px; }
+  .new summary { list-style: none; display: inline-block; }
   .new summary::-webkit-details-marker { display: none; }
-  .new summary .label { color: var(--fg); }
-  .new summary .sign { font: 400 20px/1 var(--font-mono); transition: transform .2s; }
-  .new[open] summary .sign { transform: rotate(45deg); }
-  .new form { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 20px 24px; align-items: end; padding: 4px 0 28px; }
-  .new .hint { grid-column: 1 / -1; margin: -6px 0 0; }
+  .new[open] summary { margin-bottom: 12px; }
+  .new form { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .new .actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
 
-  /* Filters: text links, the active one underlined */
-  .filters { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 28px 0 14px; }
-  .filters a { padding: 6px 0; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
-  .filters a:hover { color: var(--fg); border-color: var(--line); }
-  .filters a.on { color: var(--fg); border-color: var(--fg); }
-  .filters a.on-late { color: var(--late); border-color: var(--late); }
-  .filters sup { font-size: 10px; margin-left: 3px; }
+  /* Status tabs: the counts and the filter are one control */
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px 28px; border-bottom: 1px solid var(--line-strong); margin-bottom: 0; }
+  .tabs a { color: var(--muted); text-decoration: none; padding: 10px 0; margin-bottom: -1px;
+            border-bottom: 3px solid transparent; font-size: 14px; font-weight: 500; }
+  .tabs a:hover { color: var(--ink); }
+  .tabs a.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .tabs a.on.late-tab { border-bottom-color: var(--late); }
+  .tabs .count { font-family: var(--mono); font-size: 12px; margin-left: 6px; padding: 1px 6px;
+                 border-radius: var(--radius); background: var(--head); color: var(--muted); }
+  .tabs .late-tab .count { background: var(--late-soft); color: var(--late); }
 
   /* Table */
-  .scroll { overflow-x: auto; border-top: 1px solid var(--fg); }
-  table { width: 100%; border-collapse: collapse; min-width: 760px; }
-  th { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
-  td { padding: 16px 16px 16px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  .idx { color: var(--fg-faint); width: 56px; padding-left: 12px; }
-  .subject { font-weight: 600; }
-  .subject a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .2s; }
-  tbody tr:hover .subject a, .subject a:focus-visible { background-size: 100% 1px; }
-  tbody tr:hover { background: var(--surface); }
+  .table-panel { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 820px; }
+  th { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); background: var(--head);
+       padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: #faf9f6; }
+  .ref { color: var(--muted); white-space: nowrap; }
+  .subject a { font-weight: 500; color: var(--ink); text-decoration: none; }
+  .subject a:hover { color: var(--accent); text-decoration: underline; }
 
-  /* Overdue rows in red: wash, a left rule and red deadline text */
-  tr.late td { background: var(--late-wash); }
-  tr.late td:first-child { box-shadow: inset 3px 0 0 var(--late); }
-  tr.late .due, tr.late .when { color: var(--late); }
-  td .flag { display: block; margin-top: 4px; }
+  /* Overdue rows in red: a left rule, a tint, red due text and an "Overdue" tag */
+  tr.late td { background: var(--late-soft); }
+  tr.late:hover td { background: #f8e4e1; }
+  tr.late td:first-child { box-shadow: inset 4px 0 0 var(--late); }
+  tr.late .due { color: var(--late); font-weight: 500; }
+  .tags { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 
-  .empty { padding: 56px 0; color: var(--fg-faint); }
+  .empty { text-align: center; color: var(--muted); padding: 48px 16px; }
+  .foot { margin-top: 12px; font-size: 13px; }
 
-  /* Phones: counts become a list, the form stacks, each table row stacks into a block */
-  @media (max-width: 720px) {
-    .ledger { grid-template-columns: 1fr; }
-    .ledger div, .ledger div + div {
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 12px 0; border-left: 0;
-    }
-    .ledger div + div { border-top: 1px solid var(--line); }
-    .ledger .num { margin: 0; font-size: 22px; }
-
+  @media (max-width: 760px) {
     .new form { grid-template-columns: 1fr; }
-
     table { min-width: 0; }
     thead { display: none; }
-    tr { display: grid; grid-template-columns: 52px 1fr 1fr; border-bottom: 1px solid var(--line); padding: 14px 0; }
-    td { border: 0; padding: 2px 12px 2px 0; }
-    td.idx { grid-row: span 4; padding-left: 10px; }
-    td.subject, td.requester { grid-column: 2 / 4; }
-    td.requester { margin-bottom: 10px; }
-    td[data-label]::before { content: attr(data-label); display: block; font: 500 10px/1.6 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); }
-    td.st { grid-column: 2 / 4; margin-top: 10px; }
-    tr.late { background: var(--late-wash); box-shadow: inset 3px 0 0 var(--late); }
+    tr { display: grid; grid-template-columns: 1fr 1fr; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    td { border: 0; padding: 2px 0; }
+    td.ref, td.subject, td.requester, td.status-cell { grid-column: 1 / -1; }
+    td.requester { margin-bottom: 8px; }
+    td[data-label]::before { content: attr(data-label); display: block; font-size: 12px; color: var(--muted); }
+    td.status-cell { margin-top: 8px; }
+    .tags { flex-direction: row; }
+    tr.late { background: var(--late-soft); box-shadow: inset 4px 0 0 var(--late); }
     tr.late td, tr.late td:first-child { background: none; box-shadow: none; }
-    .empty { grid-column: 1 / -1; }
   }
 {% endblock %}
 
 {% block content %}
 {% set total = stats.RECEIVED + stats.IN_PROGRESS + stats.RESPONDED + stats.CLOSED + stats.WITHDRAWN %}
-{% set open_count = stats.RECEIVED + stats.IN_PROGRESS %}
 
-<section class="lede">
-  {% if stats.overdue %}
-    <h1><span class="n">{{ stats.overdue }}</span> {{ 'request is' if stats.overdue == 1 else 'requests are' }} past the legal deadline.</h1>
-  {% else %}
-    <h1>Every open request is within its deadline.</h1>
-  {% endif %}
-  <p>{{ open_count }} open out of {{ total }} logged. Each one is due 20 working days after receipt (FOI Act, s.10), skipping weekends and England &amp; Wales bank holidays.</p>
-</section>
+<div class="page-head">
+  <div>
+    <h1>Requests</h1>
+    <p class="muted">{{ stats.RECEIVED + stats.IN_PROGRESS }} open of {{ total }}. Each is due 20 working days after receipt, excluding weekends and bank holidays.</p>
+  </div>
+</div>
 
-<section class="ledger" aria-label="Requests by status">
-  <div><span class="label">Received</span><span class="num">{{ stats.RECEIVED }}</span></div>
-  <div><span class="label">In progress</span><span class="num">{{ stats.IN_PROGRESS }}</span></div>
-  <div><span class="label">Responded</span><span class="num">{{ stats.RESPONDED }}</span></div>
-  <div><span class="label">Closed · Withdrawn</span><span class="num">{{ stats.CLOSED }} · {{ stats.WITHDRAWN }}</span></div>
-  <div class="{% if stats.overdue %}late{% endif %}"><span class="label">Overdue</span><span class="num">{{ stats.overdue }}</span></div>
-</section>
+{% if stats.overdue %}
+  <div class="notice" role="status">
+    <strong>{{ stats.overdue }} {{ 'request is' if stats.overdue == 1 else 'requests are' }} past the legal deadline</strong>
+    {% if not overdue %}<a href="/?overdue=true">Show overdue requests</a>{% else %}Showing overdue requests only. <a href="/">Show all</a>{% endif %}
+  </div>
+{% endif %}
 
 <details class="new" {% if error %}open{% endif %}>
-  <summary><span class="label">Log a new request</span><span class="sign" aria-hidden="true">+</span></summary>
-  {% if error %}
-    <div class="error" role="alert"><span class="label">Not saved</span>{{ error }}</div>
-  {% endif %}
-  <form method="post" action="/new">
-    <label class="field"><span class="label">Requester name</span>
-      <input type="text" name="requester_name" required value="{{ form.requester_name or '' }}"></label>
-    <label class="field"><span class="label">Requester email</span>
-      <input type="email" name="requester_email" required value="{{ form.requester_email or '' }}"></label>
-    <label class="field"><span class="label">Subject</span>
-      <input type="text" name="subject" required value="{{ form.subject or '' }}"></label>
-    <label class="field"><span class="label">Date received</span>
-      <input type="date" name="received_date" required max="{{ today.isoformat() }}" value="{{ form.received_date or today.isoformat() }}"></label>
-    <button class="btn" type="submit">Log request</button>
-    <p class="hint label">The due date is worked out for you: 20 working days, skipping weekends and bank holidays.</p>
-  </form>
+  <summary class="btn">New request</summary>
+  <div class="panel">
+    <div class="panel-head">Log a new request</div>
+    <div class="panel-body">
+      {% if error %}
+        <div class="notice" role="alert"><strong>The request was not saved</strong>{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/new">
+        <label class="field">Requester name
+          <input type="text" name="requester_name" required value="{{ form.requester_name or '' }}"></label>
+        <label class="field">Requester email
+          <input type="email" name="requester_email" required value="{{ form.requester_email or '' }}"></label>
+        <label class="field">Subject
+          <input type="text" name="subject" required value="{{ form.subject or '' }}"></label>
+        <label class="field">Date received
+          <input type="date" name="received_date" required max="{{ today.isoformat() }}" value="{{ form.received_date or today.isoformat() }}"></label>
+        <div class="actions">
+          <button class="btn" type="submit">Log request</button>
+          <span class="muted small">The due date is calculated for you.</span>
+        </div>
+      </form>
+    </div>
+  </div>
 </details>
 
-<nav class="filters" aria-label="Filter requests">
-  <a class="label {% if not selected and not overdue %}on{% endif %}" href="/">All<sup>{{ total }}</sup></a>
+<nav class="tabs" aria-label="Filter by status">
+  <a class="{% if not selected and not overdue %}on{% endif %}" href="/">All<span class="count">{{ total }}</span></a>
   {% for s in statuses %}
-    <a class="label {% if selected == s %}on{% endif %}" href="/?status={{ s.value }}">{{ s.value.replace('_', ' ') }}<sup>{{ stats[s.value] }}</sup></a>
+    <a class="{% if selected == s %}on{% endif %}" href="/?status={{ s.value }}">{{ s.value.replace('_', ' ').capitalize() }}<span class="count">{{ stats[s.value] }}</span></a>
   {% endfor %}
-  <a class="label {% if overdue %}on-late{% endif %}" href="/?overdue=true">Overdue<sup>{{ stats.overdue }}</sup></a>
+  <a class="late-tab {% if overdue %}on{% endif %}" href="/?overdue=true">Overdue<span class="count">{{ stats.overdue }}</span></a>
 </nav>
 
-<div class="scroll">
+<div class="panel table-panel">
   <table>
     <thead>
       <tr>
-        <th class="label idx">No.</th>
-        <th class="label">Subject</th>
-        <th class="label">Requester</th>
-        <th class="label">Received</th>
-        <th class="label">Due</th>
-        <th class="label">Status</th>
+        <th>Ref</th>
+        <th>Subject</th>
+        <th>Requester</th>
+        <th>Received</th>
+        <th>Due</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody>
@@ -151,34 +130,32 @@
       {% set is_open = r.status.value in ('RECEIVED', 'IN_PROGRESS') %}
       {% set days = (r.due_date - today).days %}
       <tr class="{% if r.is_overdue %}late{% endif %}">
-        <td class="mono idx">{{ '%03d' % r.id }}</td>
+        <td class="mono ref">FOI-{{ '%03d' % r.id }}</td>
         <td class="subject"><a href="/requests/{{ r.id }}/view">{{ r.subject }}</a></td>
-        <td class="requester">{{ r.requester_name }}<div class="faint small">{{ r.requester_email }}</div></td>
-        <td class="mono muted" data-label="Received">{{ r.received_date.strftime('%d %b %Y') }}</td>
+        <td class="requester">{{ r.requester_name }}<div class="muted small">{{ r.requester_email }}</div></td>
+        <td class="mono" data-label="Received">{{ r.received_date.strftime('%d %b %Y') }}</td>
         <td data-label="Due">
           <div class="mono due">{{ r.due_date.strftime('%d %b %Y') }}</div>
           {% if is_open %}
-            <div class="mono small when faint">
-              {%- if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} over
-              {%- elif days == 0 %}due today
+            <div class="small {{ 'late-text' if r.is_overdue else 'muted' }}">
+              {%- if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} overdue
+              {%- elif days == 0 %}Due today
               {%- else %}{{ days }} day{{ 's' if days != 1 }} left{% endif -%}
             </div>
           {% endif %}
         </td>
-        <td class="st">
-          <span class="label status {{ 'open' if is_open else 'done' }}">{{ r.status.value.replace('_', ' ') }}</span>
-          {% if r.is_overdue %}<span class="label flag">Overdue</span>{% endif %}
+        <td class="status-cell">
+          <div class="tags">
+            <span class="tag {{ '' if is_open else 'done' }}">{{ r.status.value.replace('_', ' ').capitalize() }}</span>
+            {% if r.is_overdue %}<span class="tag late">Overdue</span>{% endif %}
+          </div>
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="6" class="empty">Nothing here. Try another filter.</td></tr>
+      <tr><td colspan="6" class="empty">No requests match this filter.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-
-<footer>
-  <span class="label">Rendered {{ today.strftime('%d %b %Y') }} · {{ requests|length }} shown</span>
-  <span class="label">Overdue = past due and still received or in progress</span>
-</footer>
+<p class="foot muted">{{ requests|length }} shown · sorted by due date, soonest first · days are calendar days</p>
 {% endblock %}
