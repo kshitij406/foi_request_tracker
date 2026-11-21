@@ -2,7 +2,7 @@
 
 A small backend for logging Freedom of Information (FOI) requests. It calculates each request's 20-working-day legal deadline, enforces a status workflow, keeps an audit history of every change and flags overdue requests.
 
-Built with **FastAPI**, **SQLite** (raw SQL through `sqlite3`, no ORM), **Pydantic** and a server-rendered **Jinja2** page.
+Built with **FastAPI**, **SQLite** (raw SQL through `sqlite3`, no ORM), **Pydantic** and server-rendered **Jinja2** pages. `python-multipart` is the one extra dependency, needed to read HTML form posts.
 
 ## How to run
 
@@ -46,7 +46,17 @@ Any other move, including moving to the same status, returns `409` with the allo
 | `GET`  | `/requests/{id}` | One request with its event history (404 if unknown) |
 | `POST` | `/requests/{id}/transitions` | Change status (`to_status`, optional `note`). 404 if unknown, 409 if the move is not allowed. |
 | `GET`  | `/stats` | Count per status, plus `overdue` |
-| `GET`  | `/` | HTML table of requests, overdue rows in red, filter links |
+
+### HTML pages
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/` | List of requests: overdue rows in red, filter links, a "Log a new request" form |
+| `POST` | `/new` | Form target for creating a request. Redirects to its detail page, or shows the error and keeps what was typed. |
+| `GET`  | `/requests/{id}/view` | Detail page: request details, a button for each allowed move, history |
+| `POST` | `/requests/{id}/move` | Form target for a status change, with an optional note |
+
+The pages use plain HTML forms, no JavaScript. They call the same repository functions as the API, so the same rules apply.
 
 ## Design decisions
 
@@ -65,7 +75,6 @@ Any other move, including moving to the same status, returns `409` with the allo
 - **The holiday list is a static file.** `data/bank-holidays.json` has to be updated each year, and it only covers England & Wales.
 - **SQLite allows one writer at a time.** Fine for a demo; production would use Postgres.
 - **`assigned_to` exists but there is no endpoint to set it.**
-- **The HTML page is read-only.** Creating requests and changing their status is done through the API (`/docs`).
 - **`foi.db` is committed** so the demo works straight from a clone. A real deployment would ignore `*.db`.
 
 ## Project structure
@@ -79,7 +88,9 @@ app/
   deadlines.py       Working-day and due-date calculation
   db.py              SQLite connection, init_db, get_db dependency
   templates/
-    index.html       Jinja2 list page (HTML and CSS, no JavaScript)
+    base.html        Shared layout and styles
+    index.html       List page with the new-request form
+    detail.html      One request: details, allowed moves, history
 data/
   bank-holidays.json gov.uk bank holiday data
 tests/
@@ -87,6 +98,7 @@ tests/
   test_deadlines.py
   test_workflow.py
   test_api.py
+  test_pages.py      HTML forms: create, move, error handling
 schema.sql           Tables and indexes
 seed.py              Demo data loader
 ```
@@ -97,4 +109,4 @@ seed.py              Demo data loader
 pytest -v
 ```
 
-19 tests cover the deadline rules (including Christmas and Easter), the workflow rules and the API end to end. Each API test runs against its own temporary database, so `foi.db` is never touched.
+25 tests cover the deadline rules (including Christmas and Easter), the workflow rules, the API end to end and the HTML forms. Each API test runs against its own temporary database, so `foi.db` is never touched.
