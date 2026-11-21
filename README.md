@@ -6,8 +6,10 @@ Built with **FastAPI**, **SQLite** (raw SQL through `sqlite3`, no ORM), **Pydant
 
 ## How to run
 
+Requires Python 3.12.
+
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
