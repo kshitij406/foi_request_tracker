@@ -37,6 +37,16 @@ uvicorn app.main:app --reload
 
 The database (`foi.db`) is created on first run. Set `FOI_DB_PATH` to use a different file.
 
+### Demo data
+
+The repo ships with `foi.db` already seeded. To regenerate it (dates are relative to today, so overdue and due-soon requests stay realistic):
+
+```bash
+python -m app.seed --reset
+```
+
+This creates 12 requests covering every status, including a few overdue ones.
+
 ## API
 
 | Method | Path | Description |
@@ -66,6 +76,7 @@ app/
   workflow.py    Status enum and allowed transitions
   deadlines.py   Working-day and due-date calculation
   db.py          SQLite connection helpers
+  seed.py        Demo data loader
 static/
   index.html     Frontend (HTML/CSS/vanilla JS, calls the API)
 data/
