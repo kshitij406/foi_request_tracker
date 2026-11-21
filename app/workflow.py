@@ -7,6 +7,8 @@ class Status(str, Enum):
     CLOSED = "CLOSED"
     WITHDRAWN = "WITHDRAWN"
     
+# Single source of truth for the status lifecycle. CLOSED and WITHDRAWN are final.
+# static/index.html keeps a copy of this map to decide which buttons to show.
 ALLOWED_TRANSITIONS = {
     Status.RECEIVED: {Status.IN_PROGRESS, Status.WITHDRAWN},
     Status.IN_PROGRESS: {Status.RESPONDED, Status.WITHDRAWN},
@@ -15,6 +17,7 @@ ALLOWED_TRANSITIONS = {
     Status.WITHDRAWN: set()
 }
 
+# Carries the allowed moves so the API can tell the client what it could have done instead.
 class InvalidTransition(Exception):
     def __init__(self,current,target):
         self.current = current

@@ -2,7 +2,7 @@ import json
 from datetime import date
 from datetime import timedelta
 
-# Loads bank holidays into bank_holidays set
+# Loads England & Wales bank holidays from the gov.uk JSON (data/bank-holidays.json)
 def load_bank_holidays(path:str) -> set[date]:
     with open(path, mode="r", encoding="utf-8") as file:
         data = json.load(file)
@@ -23,7 +23,8 @@ def is_working_day(d: date, holidays: set[date]) -> bool:
     else:
         return True
 
-# Returns nth day from the start date    
+# Returns the nth working day after start. The start day itself is never counted,
+# which also handles requests received on a weekend or bank holiday.
 def add_working_days(start: date, n: int, holidays: set[date]) -> date :
     day = 1
     d = start
@@ -35,6 +36,6 @@ def add_working_days(start: date, n: int, holidays: set[date]) -> date :
         
     return d
 
-# Returns the due date for FOI(Freedom of Information) ticket
+# FOI Act s.10: respond within 20 working days of receipt
 def foi_due_date(received: date, holidays: set[date]) -> date:
     return add_working_days(received, 20, holidays)

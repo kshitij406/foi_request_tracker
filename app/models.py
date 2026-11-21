@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator
 from app.workflow import Status
 
 
+# Input for POST /requests. due_date and status are never accepted from the client.
 class RequestCreate(BaseModel):
     requester_name: str
     requester_email: str
@@ -29,7 +30,7 @@ class RequestOut(BaseModel):
     status: Status
     assigned_to: str | None
     created_at: str
-    is_overdue: bool
+    is_overdue: bool  # computed per request, not stored, so it never goes stale
 
 
 class EventOut(BaseModel):

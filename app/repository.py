@@ -3,6 +3,7 @@ from datetime import date
 from app.workflow import InvalidTransition, RequestNotFound, Status, check_transition
 
 
+# Request row and its first history event are written in one transaction (`with conn`).
 def create_request(conn, data, due_date) -> int:
     with conn:
         cur = conn.execute(
@@ -51,7 +52,7 @@ def get_events(conn, request_id) -> list[dict]:
         SELECT id, request_id, from_status, to_status, note, created_at
         FROM events
         WHERE request_id = ?
-        ORDER BY id DESC
+        ORDER BY id DESC  -- newest first
         """,
         (request_id,),
     )
@@ -72,6 +73,7 @@ def list_requests(conn, status=None, overdue=False, today=None) -> list[dict]:
     if overdue:
         if today is None:
             raise ValueError("today is required when overdue=True")
+        # Overdue = past due and still open. Responded/closed/withdrawn requests are never overdue.
         conditions.append("due_date < ?")
         params.append(today.isoformat())
         conditions.append("status IN (?, ?)")
@@ -81,7 +83,7 @@ def list_requests(conn, status=None, overdue=False, today=None) -> list[dict]:
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY due_date"
+    query += " ORDER BY due_date"  # most urgent first
 
     rows = conn.execute(query, params).fetchall()
     return [dict(r) for r in rows]
@@ -98,6 +100,7 @@ def apply_transition(conn, request_id, target, note=None) -> dict:
         current = Status(row["status"])
         check_transition(current, target)
 
+        # "AND status = ?" guards against a concurrent update between the SELECT and this UPDATE.
         cur = conn.execute(
             "UPDATE requests SET status = ? WHERE id = ? AND status = ?",
             (target.value, request_id, current.value),

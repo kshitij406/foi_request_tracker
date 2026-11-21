@@ -1,0 +1,83 @@
+# FOI Request Tracker
+
+A small web app for logging Freedom of Information (FOI) requests, tracking their status, and flagging any that miss the statutory deadline.
+
+Built with **FastAPI** and **SQLite**, plus a single-page HTML frontend that needs no build step.
+
+## Features
+
+- Log a request. The due date is set automatically to **20 working days** after receipt, skipping weekends and England & Wales bank holidays.
+- Move requests through a fixed lifecycle. Invalid moves are rejected with `409` and a list of the moves that are allowed.
+- Full history of every status change, with optional notes.
+- Overdue flag for open requests that are past their due date.
+- Summary counts by status.
+
+## Status lifecycle
+
+```
+RECEIVED ──► IN_PROGRESS ──► RESPONDED ──► CLOSED
+    │              │
+    └──────────────┴──► WITHDRAWN
+```
+
+`CLOSED` and `WITHDRAWN` are final. Only `RECEIVED` and `IN_PROGRESS` requests can be overdue.
+
+## Getting started
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload
+```
+
+- Web app: http://localhost:8000
+- Interactive API docs: http://localhost:8000/docs
+
+The database (`foi.db`) is created on first run. Set `FOI_DB_PATH` to use a different file.
+
+## API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/health` | Health check |
+| `POST` | `/requests` | Create a request (`requester_name`, `requester_email`, `subject`, `received_date`) |
+| `GET`  | `/requests` | List requests, ordered by due date. Filters: `?status=IN_PROGRESS`, `?overdue=true` |
+| `GET`  | `/requests/{id}` | One request with its event history |
+| `POST` | `/requests/{id}/transitions` | Change status (`to_status`, optional `note`) |
+| `GET`  | `/stats` | Count per status, plus `overdue` |
+
+Example:
+
+```bash
+curl -X POST localhost:8000/requests \
+  -H 'Content-Type: application/json' \
+  -d '{"requester_name":"Jane Smith","requester_email":"jane@example.com","subject":"Parking revenue 2025","received_date":"2026-11-02"}'
+```
+
+## Project structure
+
+```
+app/
+  main.py        FastAPI app: routes, error handlers, serves the frontend
+  models.py      Pydantic request/response models
+  repository.py  All SQL queries
+  workflow.py    Status enum and allowed transitions
+  deadlines.py   Working-day and due-date calculation
+  db.py          SQLite connection helpers
+static/
+  index.html     Frontend (HTML/CSS/vanilla JS, calls the API)
+data/
+  bank-holidays.json   gov.uk bank holiday data
+schema.sql       Database tables and indexes
+tests/           Unit tests for deadlines and workflow
+```
+
+## Tests
+
+```bash
+python -m pytest
+```
+
+Use `python -m pytest` rather than plain `pytest`, so that the project root is on the import path.
