@@ -8,7 +8,7 @@ class Status(str, Enum):
     WITHDRAWN = "WITHDRAWN"
     
 # Single source of truth for the status lifecycle. CLOSED and WITHDRAWN are final.
-# static/index.html keeps a copy of this map to decide which buttons to show.
+# main.render_detail also reads it to decide which buttons the detail page shows.
 ALLOWED_TRANSITIONS = {
     Status.RECEIVED: {Status.IN_PROGRESS, Status.WITHDRAWN},
     Status.IN_PROGRESS: {Status.RESPONDED, Status.WITHDRAWN},
