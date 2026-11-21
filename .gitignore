@@ -1,5 +1,6 @@
 .venv/
 __pycache__/
 .pytest_cache
-.NOTES.mdFOI Request Tracker Assignment Brief.pdf
+.NOTES.md
+FOI Request Tracker Assignment Brief.pdf
 docs/
