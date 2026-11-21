@@ -1,12 +1,12 @@
-"""Fill the database with demo requests.
+"""Reset the database and fill it with demo requests.
 
-    python -m app.seed            # only if the database is empty
-    python -m app.seed --reset    # wipe existing requests first
+    python seed.py
+
+Wipes all existing requests and events first, so it can be re-run any time.
 
 Dates are relative to today, so the overdue / due-soon mix stays realistic whenever it's run.
 """
 import os
-import sys
 from datetime import date, timedelta
 
 from app import db, repository
@@ -45,14 +45,11 @@ def main() -> None:
     conn = db.get_connection(os.environ.get("FOI_DB_PATH", "foi.db"))
     db.init_db(conn, SCHEMA_PATH)
 
-    existing = conn.execute("SELECT COUNT(*) FROM requests").fetchone()[0]
-    if existing:
-        if "--reset" not in sys.argv:
-            sys.exit(f"Database already has {existing} requests. Use --reset to wipe and reseed.")
-        with conn:
-            conn.execute("DELETE FROM events")  # events first: they reference requests
-            conn.execute("DELETE FROM requests")
-            conn.execute("DELETE FROM sqlite_sequence")  # restart ids at 1
+    # The only place events are deleted: seeding starts from a clean slate.
+    with conn:
+        conn.execute("DELETE FROM events")  # events first: they reference requests
+        conn.execute("DELETE FROM requests")
+        conn.execute("DELETE FROM sqlite_sequence")  # restart ids at 1
 
     holidays = load_bank_holidays(HOLIDAYS_PATH)
     today = date.today()

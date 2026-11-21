@@ -3,8 +3,8 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 
 from app import db, repository
 from app.deadlines import foi_due_date, load_bank_holidays
@@ -14,12 +14,13 @@ from app.workflow import InvalidTransition, RequestNotFound, Status
 ROOT = Path(__file__).parent.parent
 HOLIDAYS_PATH = ROOT / "data" / "bank-holidays.json"
 SCHEMA_PATH = ROOT / "schema.sql"
-STATIC_PATH = ROOT / "static"
+TEMPLATES_PATH = Path(__file__).parent / "templates"
 
 # Only open requests can be overdue.
 OPEN_STATUSES = {Status.RECEIVED.value, Status.IN_PROGRESS.value}
 
 app = FastAPI(title="FOI Request Tracker")
+templates = Jinja2Templates(directory=TEMPLATES_PATH)
 
 # Runs once when the server starts: load holidays and make sure the tables exist.
 HOLIDAYS = load_bank_holidays(HOLIDAYS_PATH)
@@ -106,6 +107,26 @@ def stats(conn=Depends(db.get_db)):
     return repository.count_by_status(conn, date.today())
 
 
-# Frontend: serves static/index.html at "/". Mounted last so API routes take priority.
+# HTML page for non-developers: same data as GET /requests, rendered server-side.
 
-app.mount("/", StaticFiles(directory=STATIC_PATH, html=True), name="static")
+@app.get("/", response_class=HTMLResponse)
+def index(
+    request: Request,
+    status: Status | None = None,
+    overdue: bool = False,
+    conn=Depends(db.get_db),
+):
+    today = date.today()
+    rows = repository.list_requests(conn, status=status, overdue=overdue, today=today)
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "requests": [to_request_out(row, today) for row in rows],
+            "stats": repository.count_by_status(conn, today),
+            "statuses": list(Status),
+            "selected": status,
+            "overdue": overdue,
+            "today": today,
+        },
+    )
