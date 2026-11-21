@@ -4,127 +4,226 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FOI Request Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Unbounded:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f5f3ee; --surface: #fff; --ink: #1b2430; --muted: #5f6b7a; --line: #e2ded5;
-    --brand: #1d3a5f; --danger: #b42318; --danger-soft: #fdecea;
+    /* Black, with white used as light. Hierarchy is opacity. Red means one thing: overdue. */
+    --bg: #000;
+    --fg: #fff;
+    --fg-muted: rgba(255, 255, 255, 0.74);
+    --fg-faint: rgba(255, 255, 255, 0.6);
+    --line: rgba(255, 255, 255, 0.16);
+    --surface: rgba(255, 255, 255, 0.04);
+    --late: #ff5a4f;                       /* 6.4:1 on black */
+    --late-wash: rgba(255, 90, 79, 0.09);
+
+    --gutter: clamp(16px, 4vw, 40px);
+    --measure: 1180px;
+
+    --font: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-display: "Unbounded", "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  a { color: inherit; }
-
-  header { background: var(--brand); color: #fff; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-  header .wrap { padding-top: 18px; padding-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 20px; }
-  header p { margin: 2px 0 0; font-size: 13px; opacity: .75; }
-  header nav a { font-size: 13px; opacity: .85; margin-left: 16px; }
-
-  main { padding-top: 24px; padding-bottom: 40px; }
-
-  /* Summary counts from GET /stats */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-  .stat .n { font-size: 28px; font-weight: 700; line-height: 1.1; }
-  .stat .l { color: var(--muted); font-size: 13px; }
-  .stat.alert .n { color: var(--danger); }
-
-  /* Filter links */
-  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .filters a {
-    text-decoration: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
-    padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased;
   }
-  .filters a.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--fg); color: var(--bg); }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
 
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: #faf9f6; }
-  tbody tr:last-child td { border-bottom: 0; }
-  .id { color: var(--muted); }
-  .sub { color: var(--muted); font-size: 13px; }
-  .empty { padding: 48px 16px; text-align: center; color: var(--muted); }
+  .container { max-width: calc(var(--measure) + var(--gutter) * 2); margin: 0 auto; padding: 0 var(--gutter); }
+  .label {
+    font: 500 11px/1.4 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
 
-  /* Overdue rows in red */
-  tr.overdue { background: var(--danger-soft); }
-  tr.overdue td.due { color: var(--danger); font-weight: 600; }
+  /* Top bar */
+  .top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 0; border-bottom: 1px solid var(--line);
+  }
+  .top .name { font: 800 14px/1 var(--font-display); letter-spacing: 0.02em; text-transform: uppercase; }
+  .top a.label:hover { color: var(--fg); }
 
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .RECEIVED    { color: #1d3a5f; background: #e7edf5; }
-  .IN_PROGRESS { color: #8a5a00; background: #fdf3dc; }
-  .RESPONDED   { color: #1f6f4a; background: #e3f3ea; }
-  .CLOSED      { color: #4b5563; background: #eceef1; }
-  .WITHDRAWN   { color: #7a4b8a; background: #f3eaf6; }
-  .OVERDUE     { color: #fff;    background: var(--danger); }
+  /* Headline: the one thing to read first */
+  .lede { padding: clamp(48px, 9vw, 112px) 0 clamp(32px, 5vw, 56px); }
+  .lede h1 {
+    margin: 0;
+    font: 800 clamp(2.2rem, 6.4vw, 5.2rem)/0.98 var(--font-display);
+    letter-spacing: -0.03em;
+    max-width: 14ch;
+  }
+  .lede h1 .n { color: var(--late); }
+  .lede p { margin: 20px 0 0; max-width: 56ch; color: var(--fg-muted); font-size: 17px; }
 
-  @media (max-width: 640px) { .wrap { padding: 0 16px; } th, td { padding: 10px 12px; } }
+  /* Counts ledger: one row, hairline dividers */
+  .ledger {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .ledger div { padding: 18px 20px 16px 0; }
+  .ledger div + div { padding-left: 20px; border-left: 1px solid var(--line); }
+  .ledger .num { display: block; font: 700 32px/1.1 var(--font-display); font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .ledger .late .num { color: var(--late); }
+
+  /* Filters: text links, the active one underlined */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 28px 0 14px; }
+  .filters a { padding: 6px 0; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
+  .filters a:hover { color: var(--fg); border-color: var(--line); }
+  .filters a.on { color: var(--fg); border-color: var(--fg); }
+  .filters a.on-late { color: var(--late); border-color: var(--late); }
+  .filters sup { font-size: 10px; margin-left: 3px; }
+
+  /* Table */
+  .scroll { overflow-x: auto; border-top: 1px solid var(--fg); }
+  table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  th { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+  td { padding: 16px 16px 16px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .mono { font: 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .idx { color: var(--fg-faint); width: 56px; padding-left: 12px; }
+  .subject { font-weight: 600; }
+  .muted { color: var(--fg-muted); }
+  .faint { color: var(--fg-faint); }
+  .small { font-size: 13px; }
+
+  /* Overdue rows in red: wash, a left rule and red deadline text */
+  tr.late td { background: var(--late-wash); }
+  tr.late td:first-child { box-shadow: inset 3px 0 0 var(--late); }
+  tr.late .due, tr.late .when { color: var(--late); }
+
+  /* Status: marker + text. Filled = open, outlined = finished. */
+  .status { white-space: nowrap; }
+  .status::before {
+    content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px;
+    vertical-align: 1px; background: currentColor;
+  }
+  .status.open { color: var(--fg); }
+  .status.done { color: var(--fg-faint); }
+  .status.done::before { background: none; border: 1px solid currentColor; }
+  .flag { display: block; margin-top: 4px; color: var(--late); }
+
+  .empty { padding: 56px 0; color: var(--fg-faint); }
+
+  footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: 28px 0 48px; }
+
+  /* Phones: counts become a list, each table row stacks into a block */
+  @media (max-width: 720px) {
+    .ledger { grid-template-columns: 1fr; }
+    .ledger div, .ledger div + div {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 12px 0; border-left: 0;
+    }
+    .ledger div + div { border-top: 1px solid var(--line); }
+    .ledger .num { margin: 0; font-size: 22px; }
+
+    table { min-width: 0; }
+    thead { display: none; }
+    tr { display: grid; grid-template-columns: 52px 1fr 1fr; border-bottom: 1px solid var(--line); padding: 14px 0; }
+    td { border: 0; padding: 2px 12px 2px 0; }
+    td.idx { grid-row: span 4; padding-left: 10px; }
+    td.subject, td.requester { grid-column: 2 / 4; }
+    td.requester { margin-bottom: 10px; }
+    td[data-label]::before { content: attr(data-label); display: block; font: 500 10px/1.6 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); }
+    td.st { grid-column: 2 / 4; margin-top: 10px; }
+    tr.late { background: var(--late-wash); box-shadow: inset 3px 0 0 var(--late); }
+    tr.late td, tr.late td:first-child { background: none; box-shadow: none; }
+    .empty { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
+{% set total = stats.RECEIVED + stats.IN_PROGRESS + stats.RESPONDED + stats.CLOSED + stats.WITHDRAWN %}
+{% set open_count = stats.RECEIVED + stats.IN_PROGRESS %}
 
-<header>
-  <div class="wrap">
-    <div>
-      <h1>FOI Request Tracker</h1>
-      <p>Freedom of Information requests and their 20-working-day deadlines</p>
-    </div>
-    <nav><a href="/docs">API docs</a></nav>
-  </div>
-</header>
+<div class="container">
+  <header class="top">
+    <span class="name">FOI Tracker</span>
+    <a class="label" href="/docs">API docs →</a>
+  </header>
 
-<main class="wrap">
-  <section class="stats">
-    <div class="stat"><div class="n">{{ stats.RECEIVED + stats.IN_PROGRESS }}</div><div class="l">Open</div></div>
-    <div class="stat{% if stats.overdue %} alert{% endif %}"><div class="n">{{ stats.overdue }}</div><div class="l">Overdue</div></div>
-    <div class="stat"><div class="n">{{ stats.RESPONDED }}</div><div class="l">Responded</div></div>
-    <div class="stat"><div class="n">{{ stats.CLOSED }}</div><div class="l">Closed</div></div>
-    <div class="stat"><div class="n">{{ stats.WITHDRAWN }}</div><div class="l">Withdrawn</div></div>
+  <section class="lede">
+    {% if stats.overdue %}
+      <h1><span class="n">{{ stats.overdue }}</span> {{ 'request is' if stats.overdue == 1 else 'requests are' }} past the legal deadline.</h1>
+    {% else %}
+      <h1>Every open request is within its deadline.</h1>
+    {% endif %}
+    <p>{{ open_count }} open out of {{ total }} logged. Each one is due 20 working days after receipt (FOI Act, s.10), skipping weekends and England &amp; Wales bank holidays.</p>
   </section>
 
-  <nav class="filters">
-    <a href="/" class="{% if not selected and not overdue %}active{% endif %}">All</a>
+  <section class="ledger" aria-label="Requests by status">
+    <div><span class="label">Received</span><span class="num">{{ stats.RECEIVED }}</span></div>
+    <div><span class="label">In progress</span><span class="num">{{ stats.IN_PROGRESS }}</span></div>
+    <div><span class="label">Responded</span><span class="num">{{ stats.RESPONDED }}</span></div>
+    <div><span class="label">Closed · Withdrawn</span><span class="num">{{ stats.CLOSED }} · {{ stats.WITHDRAWN }}</span></div>
+    <div class="{% if stats.overdue %}late{% endif %}"><span class="label">Overdue</span><span class="num">{{ stats.overdue }}</span></div>
+  </section>
+
+  <nav class="filters" aria-label="Filter requests">
+    <a class="label {% if not selected and not overdue %}on{% endif %}" href="/">All<sup>{{ total }}</sup></a>
     {% for s in statuses %}
-      <a href="/?status={{ s.value }}" class="{% if selected == s %}active{% endif %}">{{ s.value.replace('_', ' ').title() }}</a>
+      <a class="label {% if selected == s %}on{% endif %}" href="/?status={{ s.value }}">{{ s.value.replace('_', ' ') }}<sup>{{ stats[s.value] }}</sup></a>
     {% endfor %}
-    <a href="/?overdue=true" class="{% if overdue %}active{% endif %}">Overdue</a>
+    <a class="label {% if overdue %}on-late{% endif %}" href="/?overdue=true">Overdue<sup>{{ stats.overdue }}</sup></a>
   </nav>
 
-  <div class="card">
+  <div class="scroll">
     <table>
       <thead>
-        <tr><th>#</th><th>Subject</th><th>Requester</th><th>Received</th><th>Due</th><th>Status</th></tr>
+        <tr>
+          <th class="label idx">No.</th>
+          <th class="label">Subject</th>
+          <th class="label">Requester</th>
+          <th class="label">Received</th>
+          <th class="label">Due</th>
+          <th class="label">Status</th>
+        </tr>
       </thead>
       <tbody>
       {% for r in requests %}
+        {% set is_open = r.status.value in ('RECEIVED', 'IN_PROGRESS') %}
         {% set days = (r.due_date - today).days %}
-        <tr class="{% if r.is_overdue %}overdue{% endif %}">
-          <td class="id">{{ r.id }}</td>
-          <td><strong>{{ r.subject }}</strong></td>
-          <td>{{ r.requester_name }}<div class="sub">{{ r.requester_email }}</div></td>
-          <td>{{ r.received_date.strftime('%d %b %Y') }}</td>
-          <td class="due">
-            {{ r.due_date.strftime('%d %b %Y') }}
-            {% if r.status.value in ('RECEIVED', 'IN_PROGRESS') %}
-              <div class="sub">
-                {% if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} overdue
-                {% elif days == 0 %}Due today
-                {% else %}{{ days }} day{{ 's' if days != 1 }} left{% endif %}
+        <tr class="{% if r.is_overdue %}late{% endif %}">
+          <td class="mono idx">{{ '%03d' % r.id }}</td>
+          <td class="subject">{{ r.subject }}</td>
+          <td class="requester">{{ r.requester_name }}<div class="faint small">{{ r.requester_email }}</div></td>
+          <td class="mono muted" data-label="Received">{{ r.received_date.strftime('%d %b %Y') }}</td>
+          <td data-label="Due">
+            <div class="mono due">{{ r.due_date.strftime('%d %b %Y') }}</div>
+            {% if is_open %}
+              <div class="mono small when faint">
+                {%- if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} over
+                {%- elif days == 0 %}due today
+                {%- else %}{{ days }} day{{ 's' if days != 1 }} left{% endif -%}
               </div>
             {% endif %}
           </td>
-          <td>
-            <span class="badge {{ r.status.value }}">{{ r.status.value.replace('_', ' ').title() }}</span>
-            {% if r.is_overdue %}<span class="badge OVERDUE">Overdue</span>{% endif %}
+          <td class="st">
+            <span class="label status {{ 'open' if is_open else 'done' }}">{{ r.status.value.replace('_', ' ') }}</span>
+            {% if r.is_overdue %}<span class="label flag">Overdue</span>{% endif %}
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="6" class="empty">No requests match this filter.</td></tr>
+        <tr><td colspan="6" class="empty">Nothing here. Try another filter.</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
-</main>
 
+  <footer>
+    <span class="label">Rendered {{ today.strftime('%d %b %Y') }} · {{ requests|length }} shown</span>
+    <span class="label">Overdue = past due and still received or in progress</span>
+  </footer>
+</div>
 </body>
 </html>
