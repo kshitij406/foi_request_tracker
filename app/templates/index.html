@@ -128,7 +128,6 @@
     <tbody>
     {% for r in requests %}
       {% set is_open = r.status.value in ('RECEIVED', 'IN_PROGRESS') %}
-      {% set days = (r.due_date - today).days %}
       <tr class="{% if r.is_overdue %}late{% endif %}">
         <td class="mono ref">FOI-{{ '%03d' % r.id }}</td>
         <td class="subject"><a href="/requests/{{ r.id }}/view">{{ r.subject }}</a></td>
@@ -136,11 +135,12 @@
         <td class="mono" data-label="Received">{{ r.received_date.strftime('%d %b %Y') }}</td>
         <td data-label="Due">
           <div class="mono due">{{ r.due_date.strftime('%d %b %Y') }}</div>
-          {% if is_open %}
+          {% set n = r.working_days_left %}
+          {% if n is not none %}
             <div class="small {{ 'late-text' if r.is_overdue else 'muted' }}">
-              {%- if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} overdue
-              {%- elif days == 0 %}Due today
-              {%- else %}{{ days }} day{{ 's' if days != 1 }} left{% endif -%}
+              {%- if n < 0 %}{{ -n }} working day{{ 's' if n != -1 }} overdue
+              {%- elif n == 0 %}Due today
+              {%- else %}{{ n }} working day{{ 's' if n != 1 }} left{% endif -%}
             </div>
           {% endif %}
         </td>
@@ -157,5 +157,5 @@
     </tbody>
   </table>
 </div>
-<p class="foot muted">{{ requests|length }} shown · sorted by due date, soonest first · days are calendar days</p>
+<p class="foot muted">{{ requests|length }} shown · sorted by due date, soonest first</p>
 {% endblock %}

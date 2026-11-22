@@ -24,7 +24,7 @@ def test_create_returns_201_and_due_date(client):
     res = make_request(client, received_date="2026-11-02")
     assert res.status_code == 201
     body = res.json()
-    assert body["due_date"] == "2026-11-30"
+    assert body["due_date"] == "2026-12-01"  # St Andrew's Day, 30 Nov, is skipped
     assert body["status"] == "RECEIVED"
 
 
@@ -99,3 +99,26 @@ def test_responded_request_is_never_overdue(client):
     assert res.json()["is_overdue"] is False
     assert client.get("/requests", params={"overdue": "true"}).json() == []
     assert client.get("/stats").json()["overdue"] == 0
+
+
+def test_create_rejects_blank_name_and_bad_email(client):
+    assert make_request(client, requester_name="   ").status_code == 422
+    assert make_request(client, requester_email="not-an-email").status_code == 422
+
+
+def test_create_rejects_date_outside_holiday_data(client):
+    res = make_request(client, received_date="2018-01-02")
+    assert res.status_code == 422
+    assert "Bank holiday data covers" in res.json()["detail"]
+
+
+def test_overdue_request_has_negative_working_days_left(client):
+    body = make_request(client, received_date="2025-01-06").json()
+    assert body["is_overdue"] is True
+    assert body["working_days_left"] < 0
+
+
+def test_blank_note_is_stored_as_null(client):
+    request_id = make_request(client).json()["id"]
+    move(client, request_id, "IN_PROGRESS", note="   ")
+    assert client.get(f"/requests/{request_id}").json()["events"][0]["note"] is None

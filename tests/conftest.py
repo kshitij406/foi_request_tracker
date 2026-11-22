@@ -17,9 +17,11 @@ def db_path(tmp_path, monkeypatch):
     return path
 
 
+# "with" runs the app's lifespan (start-up), exactly as uvicorn would.
 @pytest.fixture
 def client(db_path):
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 # Direct connection for asserting on rows the API doesn't expose (e.g. event counts).

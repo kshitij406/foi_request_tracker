@@ -61,6 +61,13 @@ def get_events(conn, request_id) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+# The one definition of overdue: past due and still open. Responded/closed/withdrawn are never overdue.
+# Used by list_requests and count_by_status so the two can't disagree.
+def overdue_condition(today: date) -> tuple[str, list]:
+    sql = "due_date < ? AND status IN (?, ?)"
+    return sql, [today.isoformat(), Status.RECEIVED.value, Status.IN_PROGRESS.value]
+
+
 def list_requests(conn, status=None, overdue=False, today=None) -> list[dict]:
     query = "SELECT * FROM requests"
     conditions = []
@@ -73,12 +80,9 @@ def list_requests(conn, status=None, overdue=False, today=None) -> list[dict]:
     if overdue:
         if today is None:
             raise ValueError("today is required when overdue=True")
-        # Overdue = past due and still open. Responded/closed/withdrawn requests are never overdue.
-        conditions.append("due_date < ?")
-        params.append(today.isoformat())
-        conditions.append("status IN (?, ?)")
-        params.append(Status.RECEIVED.value)
-        params.append(Status.IN_PROGRESS.value)
+        sql, values = overdue_condition(today)
+        conditions.append(sql)
+        params.extend(values)
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -90,6 +94,7 @@ def list_requests(conn, status=None, overdue=False, today=None) -> list[dict]:
 
 
 def apply_transition(conn, request_id, target, note=None) -> dict:
+    note = (note or "").strip() or None  # blank notes are stored as NULL, from the API and the forms alike
     with conn:
         row = conn.execute(
             "SELECT status FROM requests WHERE id = ?", (request_id,)
@@ -125,5 +130,7 @@ def count_by_status(conn, today: date) -> dict:
     for row in rows:
         counts[row["status"]] = row["n"]
 
-    counts["overdue"] = len(list_requests(conn, overdue=True, today=today))
+    sql, params = overdue_condition(today)
+    # sql is the fixed string from overdue_condition, never user input; values still go in params.
+    counts["overdue"] = conn.execute(f"SELECT COUNT(*) FROM requests WHERE {sql}", params).fetchone()[0]
     return counts

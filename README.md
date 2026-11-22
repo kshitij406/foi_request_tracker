@@ -32,7 +32,7 @@ RECEIVED ──► IN_PROGRESS ──► RESPONDED ──► CLOSED
 
 Any other move, including moving to the same status, returns `409` with the allowed moves. `CLOSED` and `WITHDRAWN` are final.
 
-**Deadline:** due on the 20th working day after receipt. The day of receipt is not counted, and weekends and England & Wales bank holidays are skipped. If a request arrives on a weekend or bank holiday, the count starts from the next working day, following ICO guidance (tested in `test_received_on_weekend`).
+**Deadline:** due on the 20th working day after receipt. The day of receipt is not counted, and weekends and bank holidays are skipped. Under FOIA s.10(6) a bank holiday in any part of the UK counts, so the England & Wales, Scotland and Northern Ireland lists are all used (St Andrew's Day and St Patrick's Day included). If a request arrives on a weekend or bank holiday, the count starts from the next working day, following ICO guidance (tested in `test_received_on_weekend`).
 
 **Overdue:** `due_date < today` and status is `RECEIVED` or `IN_PROGRESS`. Responded, closed and withdrawn requests are never overdue.
 
@@ -70,9 +70,12 @@ The pages use plain HTML forms, no JavaScript. They call the same repository fun
 
 ## Known limitations
 
+- **Dates mix two clocks.** `date.today()` uses the server's local date; `created_at` is UTC from SQLite.
+- **No pagination or CSRF protection** yet.
+
 - **No authentication or roles.** Anyone who can reach the API can change any request. This is the first thing to add.
 - **Clarification rule not implemented.** Under the FOI Act the 20-day clock restarts when a requester replies to a clarification request. There is no `AWAITING_CLARIFICATION` status yet.
-- **The holiday list is a static file.** `data/bank-holidays.json` has to be updated each year, and it only covers England & Wales.
+- **The holiday list is a static file.** `data/bank-holidays.json` covers 2019 to 2028 and has to be refreshed. Outside that range the app refuses to calculate a due date (422) rather than guess.
 - **SQLite allows one writer at a time.** Fine for a demo; production would use Postgres.
 - **`assigned_to` exists but there is no endpoint to set it.**
 - **`foi.db` is committed** so the demo works straight from a clone. A real deployment would ignore `*.db`.
@@ -109,4 +112,4 @@ seed.py              Demo data loader
 pytest -v
 ```
 
-25 tests cover the deadline rules (including Christmas and Easter), the workflow rules, the API end to end and the HTML forms. Each API test runs against its own temporary database, so `foi.db` is never touched.
+36 tests cover the deadline rules (including Christmas and Easter), the workflow rules, the API end to end and the HTML forms. Each API test runs against its own temporary database, so `foi.db` is never touched.

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Request not found · FOI Request Tracker{% endblock %}
+
+{% block content %}
+<nav style="font-size: 14px; margin-bottom: 16px;"><a href="/">Requests</a></nav>
+<div class="panel">
+  <div class="panel-body">
+    <h1 style="font-size: 24px; margin-bottom: 8px;">Request not found</h1>
+    <p class="muted" style="margin: 0 0 16px;">There is no request FOI-{{ '%03d' % request_id }}. It may have been mistyped.</p>
+    <a class="btn" href="/">Back to all requests</a>
+  </div>
+</div>
+{% endblock %}

@@ -38,7 +38,6 @@
 
 {% block content %}
 {% set is_open = r.status.value in ('RECEIVED', 'IN_PROGRESS') %}
-{% set days = (r.due_date - today).days %}
 {% set verbs = {'IN_PROGRESS': 'Start work', 'RESPONDED': 'Mark as responded', 'CLOSED': 'Close request', 'WITHDRAWN': 'Withdraw'} %}
 
 <nav class="crumbs"><a href="/">Requests</a> <span>/ FOI-{{ '%03d' % r.id }}</span></nav>
@@ -48,7 +47,7 @@
   <h1>{{ r.subject }}</h1>
   <div class="tags">
     <span class="tag {{ '' if is_open else 'done' }}">{{ r.status.value.replace('_', ' ').capitalize() }}</span>
-    {% if r.is_overdue %}<span class="tag late">Overdue by {{ -days }} day{{ 's' if days != -1 }}</span>{% endif %}
+    {% if r.is_overdue %}<span class="tag late">Overdue by {{ -r.working_days_left }} working day{{ 's' if r.working_days_left != -1 }}</span>{% endif %}
   </div>
 </div>
 
@@ -62,11 +61,12 @@
       <div><dt>Due</dt>
         <dd>
           <span class="mono {{ 'late-text' if r.is_overdue }}">{{ r.due_date.strftime('%d %b %Y') }}</span>
-          {% if is_open %}
+          {% set n = r.working_days_left %}
+          {% if n is not none %}
             <div class="small {{ 'late-text' if r.is_overdue else 'muted' }}">
-              {%- if r.is_overdue %}{{ -days }} day{{ 's' if days != -1 }} overdue
-              {%- elif days == 0 %}Due today
-              {%- else %}{{ days }} day{{ 's' if days != 1 }} left{% endif -%}
+              {%- if n < 0 %}{{ -n }} working day{{ 's' if n != -1 }} overdue
+              {%- elif n == 0 %}Due today
+              {%- else %}{{ n }} working day{{ 's' if n != 1 }} left{% endif -%}
             </div>
           {% endif %}
         </dd>
